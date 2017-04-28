@@ -68,6 +68,14 @@ int ex_2(){
 		computeCostVolume(left, right, costVolumeLeft, costVolumeRight, windowSize, disp);
 	}
 
+	/*computeCostVolume(left, right, costVolumeLeft, costVolumeRight, windowSize, maxDisp);
+
+	Mat dispLeft(left.rows, left.cols, CV_8UC1);
+	Mat dispRight(right.rows, right.cols, CV_8UC1);
+
+	selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
+	imshow("disp", dispLeft);*/
+
 	return 0;
 
 
@@ -167,3 +175,46 @@ void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRig
 
 }
 
+void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight){
+	
+	int disparityScale = 16;
+	
+	float disparityLevelLeft = 255;
+	float disparityLevelRight = 255;
+	int disparityLeft = 0;
+	int disparityRight = 0;
+	float costVolumeLeftXY = 0;
+	float costVolumeRightXY = 0;
+
+	// loop through pixels
+	for (int x = 0; x<dispLeft.rows; ++x) {
+		for (int y = 0; y<dispLeft.cols; ++y) {
+
+			// loop through disparity values
+			for (int i = 0; i<costVolumeLeft.size(); i++) {
+
+				costVolumeLeftXY = costVolumeLeft.at(i).at<float>(x, y);
+				costVolumeRightXY = costVolumeRight.at(i).at<float>(x, y);
+				
+				// minimize cost volumes
+				if (costVolumeLeftXY < disparityLevelLeft) {
+					disparityLevelLeft = costVolumeLeft.at(i).at<float>(x, y);
+					disparityLeft = i;
+				}
+				if (costVolumeRightXY < disparityLevelRight) {
+					disparityLevelRight = costVolumeRight.at(i).at<float>(x, y);
+					disparityRight = i;
+				}
+			}
+
+			dispLeft.at<uchar>(x, y) = disparityLeft*disparityScale;			//set pixel in desparity map
+			dispRight.at<uchar>(x, y) = disparityRight*disparityScale;			//set pixel in desparity map
+			
+			// reset comparison values for next pixel
+			disparityLeft = 0;
+			disparityRight = 0;
+			disparityLevelLeft = 255;
+			disparityLevelRight = 255;
+		}
+	}
+}
