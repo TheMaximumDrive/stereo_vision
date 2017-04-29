@@ -76,7 +76,6 @@ int ex_2(){
 	
 	// display disparity maps
 	imshow("dispLeft", dispLeft);
-	waitKey(0);
 	imshow("dispRight", dispRight);
 	waitKey(0);
 
@@ -108,10 +107,10 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 	// doesnt visualize well
 	// bright patches are areas with data > 255 ( i think )
 
-	Mat leftVolume_vis(max_rows, max_cols, CV_8UC1, 0.0);
+	/*Mat leftVolume_vis(max_rows, max_cols, CV_8UC1, 0.0);
 	Mat rightVolume_vis(max_rows, max_cols, CV_8UC1, 0.0);
 
-	/*convertScaleAbs(leftVolume, leftVolume_vis);
+	convertScaleAbs(leftVolume, leftVolume_vis);
 	imshow("Left Volume", leftVolume_vis);
 	waitKey(0);
 
@@ -182,8 +181,6 @@ void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRig
 void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight){
 	
 	int disparityScale = 16;
-	int disparityLeft = 0;
-	int disparityRight = 0;
 	float disparityPLeft = 255;
 	float disparityPRight = 255;
 	float costVolumeLeftXY = 0;
@@ -204,20 +201,16 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 				// minimize cost volumes
 				if (costVolumeLeftXY < disparityPLeft) {
 					disparityPLeft = costVolumeLeftXY;
-					disparityLeft = i;
 				}
 				if (costVolumeRightXY < disparityPRight) {
 					disparityPRight = costVolumeRightXY;
-					disparityRight = i;
 				}
 			}
 
-			dispLeft.at<uchar>(x,y) = disparityLeft*disparityScale;			//set pixel in desparity map
-			dispRight.at<uchar>(x,y) = disparityRight*disparityScale;			//set pixel in desparity map
+			dispLeft.at<uchar>(x, y) = disparityPLeft*disparityScale;			//set pixel in desparity map
+			dispRight.at<uchar>(x, y) = disparityPRight*disparityScale;			//set pixel in desparity map
 			
 			// reset comparison values for next pixel
-			disparityLeft = 0;
-			disparityRight = 0;
 			disparityPLeft = 255;
 			disparityPRight = 255;
 		}
