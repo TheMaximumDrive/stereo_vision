@@ -54,8 +54,8 @@ int ex_2(){
 	string right_path = "img/tsukuba_right.png";
 
 
-	Mat left = imread(left_path); // channels are BGR
-	Mat right = imread(right_path);
+	Mat left = imread(left_path, IMREAD_UNCHANGED); // channels are BGR
+	Mat right = imread(right_path, IMREAD_UNCHANGED);
 
 	std::vector<Mat> costVolumeLeft;
 	std::vector<Mat> costVolumeRight;
@@ -63,18 +63,20 @@ int ex_2(){
 	int disp = 0;
 	int maxDisp = 15;
 
-	for (disp; disp <= maxDisp; disp++)
+	/*for (disp; disp <= maxDisp; disp++)
 	{
 		computeCostVolume(left, right, costVolumeLeft, costVolumeRight, windowSize, disp);
-	}
+	}*/
 
-	/*computeCostVolume(left, right, costVolumeLeft, costVolumeRight, windowSize, maxDisp);
+	//TESTING computeCostVolume and selectDisparity with windowsSize=5 and disp=15
+	computeCostVolume(left, right, costVolumeLeft, costVolumeRight, windowSize, maxDisp);
 
-	Mat dispLeft(left.rows, left.cols, CV_8UC1);
-	Mat dispRight(right.rows, right.cols, CV_8UC1);
+	Mat dispLeft(left.rows, left.cols, CV_8UC1, 0.0);
+	Mat dispRight(right.rows, right.cols, CV_8UC1, 0.0);
 
 	selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
-	imshow("disp", dispLeft);*/
+	imshow("disp", dispLeft);
+	waitKey(0);
 
 	return 0;
 
@@ -193,16 +195,18 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 			// loop through disparity values
 			for (int i = 0; i<costVolumeLeft.size(); i++) {
 
-				costVolumeLeftXY = costVolumeLeft.at(i).at<float>(x, y);
-				costVolumeRightXY = costVolumeRight.at(i).at<float>(x, y);
-				
+				unsigned short valueLeft = costVolumeLeft.at(i).at<unsigned short>(x, y);
+				costVolumeLeftXY = static_cast<float>(valueLeft);
+				unsigned short valueRight = costVolumeRight.at(i).at<unsigned short>(x, y);
+				costVolumeRightXY = static_cast<float>(valueRight);
+
 				// minimize cost volumes
 				if (costVolumeLeftXY < disparityLevelLeft) {
-					disparityLevelLeft = costVolumeLeft.at(i).at<float>(x, y);
+					disparityLevelLeft = costVolumeLeftXY;
 					disparityLeft = i;
 				}
 				if (costVolumeRightXY < disparityLevelRight) {
-					disparityLevelRight = costVolumeRight.at(i).at<float>(x, y);
+					disparityLevelRight = costVolumeRightXY;
 					disparityRight = i;
 				}
 			}
