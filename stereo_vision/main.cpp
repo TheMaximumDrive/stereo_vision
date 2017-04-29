@@ -184,8 +184,8 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 	int disparityScale = 16;
 	int disparityLeft = 0;
 	int disparityRight = 0;
-	float disparityLevelLeft = 255;
-	float disparityLevelRight = 255;
+	float disparityPLeft = 255;
+	float disparityPRight = 255;
 	float costVolumeLeftXY = 0;
 	float costVolumeRightXY = 0;
 
@@ -202,12 +202,12 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 				costVolumeRightXY = static_cast<float>(valueRight);
 
 				// minimize cost volumes
-				if (costVolumeLeftXY < disparityLevelLeft) {
-					disparityLevelLeft = costVolumeLeftXY;
+				if (costVolumeLeftXY < disparityPLeft) {
+					disparityPLeft = costVolumeLeftXY;
 					disparityLeft = i;
 				}
-				if (costVolumeRightXY < disparityLevelRight) {
-					disparityLevelRight = costVolumeRightXY;
+				if (costVolumeRightXY < disparityPRight) {
+					disparityPRight = costVolumeRightXY;
 					disparityRight = i;
 				}
 			}
@@ -218,8 +218,8 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 			// reset comparison values for next pixel
 			disparityLeft = 0;
 			disparityRight = 0;
-			disparityLevelLeft = 255;
-			disparityLevelRight = 255;
+			disparityPLeft = 255;
+			disparityPRight = 255;
 		}
 	}
 }
