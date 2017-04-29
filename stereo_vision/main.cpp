@@ -54,8 +54,8 @@ int ex_2(){
 	string right_path = "img/tsukuba_right.png";
 
 
-	Mat left = imread(left_path, IMREAD_UNCHANGED); // channels are BGR
-	Mat right = imread(right_path, IMREAD_UNCHANGED);
+	Mat left = imread(left_path); // channels are BGR
+	Mat right = imread(right_path);
 
 	std::vector<Mat> costVolumeLeft;
 	std::vector<Mat> costVolumeRight;
@@ -63,19 +63,21 @@ int ex_2(){
 	int disp = 0;
 	int maxDisp = 15;
 
-	/*for (disp; disp <= maxDisp; disp++)
+	for (disp; disp <= maxDisp; disp++)
 	{
 		computeCostVolume(left, right, costVolumeLeft, costVolumeRight, windowSize, disp);
-	}*/
+	}
 
-	//TESTING computeCostVolume and selectDisparity with windowsSize=5 and disp=15
-	computeCostVolume(left, right, costVolumeLeft, costVolumeRight, windowSize, maxDisp);
-
-	Mat dispLeft(left.rows, left.cols, CV_8UC1, 0.0);
-	Mat dispRight(right.rows, right.cols, CV_8UC1, 0.0);
+	// Create empty gray-scale images
+	Mat dispLeft(left.rows, left.cols, CV_8UC1);
+	Mat dispRight(right.rows, right.cols, CV_8UC1);
 
 	selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
-	imshow("disp", dispLeft);
+	
+	// display disparity maps
+	imshow("dispLeft", dispLeft);
+	waitKey(0);
+	imshow("dispRight", dispRight);
 	waitKey(0);
 
 	return 0;
@@ -109,7 +111,7 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 	Mat leftVolume_vis(max_rows, max_cols, CV_8UC1, 0.0);
 	Mat rightVolume_vis(max_rows, max_cols, CV_8UC1, 0.0);
 
-	convertScaleAbs(leftVolume, leftVolume_vis);
+	/*convertScaleAbs(leftVolume, leftVolume_vis);
 	imshow("Left Volume", leftVolume_vis);
 	waitKey(0);
 
@@ -117,7 +119,7 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 
 	convertScaleAbs(rightVolume, rightVolume_vis);
 	imshow("Right Volume", rightVolume_vis);
-	waitKey(0);
+	waitKey(0);*/
 
 	costVolumeLeft.push_back(leftVolume);
 	costVolumeRight.push_back(rightVolume);
@@ -180,11 +182,10 @@ void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRig
 void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight){
 	
 	int disparityScale = 16;
-	
-	float disparityLevelLeft = 255;
-	float disparityLevelRight = 255;
 	int disparityLeft = 0;
 	int disparityRight = 0;
+	float disparityLevelLeft = 255;
+	float disparityLevelRight = 255;
 	float costVolumeLeftXY = 0;
 	float costVolumeRightXY = 0;
 
@@ -193,11 +194,11 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 		for (int y = 0; y<dispLeft.cols; ++y) {
 
 			// loop through disparity values
-			for (int i = 0; i<costVolumeLeft.size(); i++) {
+			for (int i = 0; i<costVolumeRight.size(); i++) {
 
-				unsigned short valueLeft = costVolumeLeft.at(i).at<unsigned short>(x, y);
+				unsigned short valueLeft = costVolumeLeft.at(i).at<unsigned short>(x,y);
 				costVolumeLeftXY = static_cast<float>(valueLeft);
-				unsigned short valueRight = costVolumeRight.at(i).at<unsigned short>(x, y);
+				unsigned short valueRight = costVolumeRight.at(i).at<unsigned short>(x,y);
 				costVolumeRightXY = static_cast<float>(valueRight);
 
 				// minimize cost volumes
@@ -211,8 +212,8 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 				}
 			}
 
-			dispLeft.at<uchar>(x, y) = disparityLeft*disparityScale;			//set pixel in desparity map
-			dispRight.at<uchar>(x, y) = disparityRight*disparityScale;			//set pixel in desparity map
+			dispLeft.at<uchar>(x,y) = disparityLeft*disparityScale;			//set pixel in desparity map
+			dispRight.at<uchar>(x,y) = disparityRight*disparityScale;			//set pixel in desparity map
 			
 			// reset comparison values for next pixel
 			disparityLeft = 0;
