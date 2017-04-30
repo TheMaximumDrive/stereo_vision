@@ -114,8 +114,6 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 	imshow("Left Volume", leftVolume_vis);
 	waitKey(0);
 
-
-
 	convertScaleAbs(rightVolume, rightVolume_vis);
 	imshow("Right Volume", rightVolume_vis);
 	waitKey(0);*/
