@@ -63,7 +63,7 @@ int ex_2(){
 
 	std::vector<Mat> costVolumeLeft;
 	std::vector<Mat> costVolumeRight;
-	int windowSize = 2;
+	int windowSize = 5;
 	int maxDisp = 15;
 
 	for (int disp = 0; disp <= maxDisp; disp++)
@@ -75,22 +75,17 @@ int ex_2(){
 	Mat dispLeft(left.rows, left.cols, CV_16UC1, 0.0);
 	Mat dispRight(right.rows, right.cols, CV_16UC1, 0.0);
 
-	Mat dispLeft_vis(left.rows, left.cols, CV_8UC1, 0.0);
-	Mat dispRight_vis(right.rows, right.cols, CV_8UC1, 0.0);
+	//Mat dispLeft_vis(left.rows, left.cols, CV_8UC1, 0.0);
+	//Mat dispRight_vis(right.rows, right.cols, CV_8UC1, 0.0);
 
 	selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
 
-	double min, max;
+	//convertScaleAbs(dispLeft, dispLeft_vis);
+	//convertScaleAbs(dispRight, dispRight_vis);
 	
-	minMaxLoc(dispLeft, &min, &max);
-	dispLeft.convertTo(dispLeft_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	minMaxLoc(dispRight, &min, &max);
-	dispRight.convertTo(dispRight_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-
 	// display disparity maps
-
-	imshow("dispLeft", dispLeft_vis);
-	imshow("dispRight", dispRight_vis);
+	imshow("dispLeft", dispLeft);
+	imshow("dispRight", dispRight);
 	waitKey(0);
 
 	return 0;
