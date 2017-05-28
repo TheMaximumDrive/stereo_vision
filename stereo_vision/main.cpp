@@ -63,8 +63,8 @@ int ex_2(){
 
 	std::vector<Mat> costVolumeLeft;
 	std::vector<Mat> costVolumeRight;
-	int windowSize = 2;
-	int maxDisp = 8;
+	int windowSize = 6; // was 2 for submission ex2
+	int maxDisp = 5; // was 8 for submission ex2
 
 	for (int disp = 0; disp <= maxDisp; disp++)
 	{
@@ -72,16 +72,19 @@ int ex_2(){
 	}
 
 	// Create empty gray-scale images
-	Mat dispLeft(left.rows, left.cols, CV_16UC1, 0.0);
-	Mat dispRight(right.rows, right.cols, CV_16UC1, 0.0);
+	//Mat dispLeft(left.rows, left.cols, CV_16UC1, 0.0);
+	//Mat dispRight(right.rows, right.cols, CV_16UC1, 0.0);
+
+	// EX3
+	Mat dispLeft(left.rows, left.cols, CV_32FC1, 0.0);
+	Mat dispRight(right.rows, right.cols, CV_32FC1, 0.0);
 
 	Mat dispLeft_vis(left.rows, left.cols, CV_8UC1, 0.0);
 	Mat dispRight_vis(right.rows, right.cols, CV_8UC1, 0.0);
 
-	selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
-
-	//convertScaleAbs(dispLeft, dispLeft_vis);
-	//convertScaleAbs(dispRight, dispRight_vis);
+	//selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
+	// EX3
+	selectDisparity_v2(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
 
 	double min, max;
 	minMaxLoc(dispLeft, &min, &max);
@@ -105,8 +108,12 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 	int max_rows = imgLeft.rows;
 	int max_cols = imgLeft.cols;
 
-	Mat leftVolume(max_rows, max_cols, CV_16UC1, 0.0);
-	Mat rightVolume(max_rows, max_cols, CV_16UC1, 0.0);
+	//Mat leftVolume(max_rows, max_cols, CV_16UC1, 0.0);
+	//Mat rightVolume(max_rows, max_cols, CV_16UC1, 0.0);
+
+	// EX3
+	Mat leftVolume(max_rows, max_cols, CV_32FC1, 1.0);
+	Mat rightVolume(max_rows, max_cols, CV_32FC1, 1.0);
 
 	for (int rows = 0; rows < max_rows; rows++)
 	{
@@ -123,11 +130,14 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 	// bright patches are areas with data > 255 ( i think )
 
 	//Mat dst_left; 
-	//leftVolume.convertTo(dst_left, CV_8U);
+	//double min, max;
+	//minMaxLoc(leftVolume, &min, &max);
+	//leftVolume.convertTo(dst_left, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
 	//imshow("Left Volume", dst_left);
 
 	//Mat dst_right;
-	//rightVolume.convertTo(dst_right, CV_8U);
+	//minMaxLoc(rightVolume, &min, &max);
+	//rightVolume.convertTo(dst_right, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
 	//imshow("Right Volume", dst_right);
 	//waitKey(0);
 
@@ -136,15 +146,37 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 
 }
 
+float weight(cv::Vec3b color_l, cv::Vec3b color_r, int sample_r, int sample_c, int sample_r_with_disp, int sample_c_with_disp){
+
+	float gamma_c = 7; // from paper
+	float gamme_p = 40; // from paper
+
+	float delta_c = sqrt(pow((color_l[0] - color_r[0]), 2) + pow((color_l[1] - color_r[1]), 2) + pow((color_l[2] - color_r[2]), 2));
+	float delta_g = sqrt(pow(sample_r - sample_r_with_disp, 2) + pow(sample_c - sample_c_with_disp, 2));
+
+	float inner = -1*( (delta_c / gamma_c ) + (delta_g / gamme_p));
+
+	float weight = expf(inner);
+
+	return weight;
+
+
+}
+
 void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRight, int r, int c, int max_rows, int max_cols, int windowSize, int disp){
 
 	int window_off = windowSize / 2;
 	int channels = imgLeft.channels();
 	
-	Vec3b left_s = cv::Vec3b(0, 0, 0);
-	Vec3b right_s = cv::Vec3b(0, 0, 0);
+	Vec3b left_p = cv::Vec3b(0, 0, 0);
+	Vec3b right_q = cv::Vec3b(0, 0, 0);
+
+	Vec3b left_q = cv::Vec3b(0, 0, 0);
+	Vec3b right_p = cv::Vec3b(0, 0, 0);
 
 	unsigned int cost = 0;
+	float energy_top = 0;
+	float energy_bottom = 0;
 
 	for (int q_r = 0; q_r < windowSize; q_r++)
 	{
@@ -166,23 +198,40 @@ void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRig
 			int sample_c_with_disp = c + (q_c_disp - window_off);
 
 			if (sample_r >= 0 && sample_r < max_rows && sample_c >= 0 && sample_c < max_cols)
-				left_s = imgLeft.at<Vec3b>(sample_r, sample_c);
+				left_p = imgLeft.at<Vec3b>(sample_r, sample_c);
+
+			if (sample_r_with_disp >= 0 && sample_r_with_disp < max_rows && sample_c_with_disp >= 0 && sample_c_with_disp < max_cols)
+				left_q = imgLeft.at<Vec3b>(sample_r_with_disp, sample_c_with_disp);
+
+			if (sample_c >= 0 && sample_c < max_cols && sample_r >= 0 && sample_r < max_rows)
+				right_p = imgRight.at<Vec3b>(sample_r, sample_c);
 
 			if (sample_c_with_disp >= 0 && sample_c_with_disp < max_cols && sample_r_with_disp >= 0 && sample_r_with_disp < max_rows)
-				right_s = imgRight.at<Vec3b>(sample_r_with_disp, sample_c_with_disp);
+				right_q = imgRight.at<Vec3b>(sample_r_with_disp, sample_c_with_disp);
 
 			for (int channel = 0; channel < channels; channel++)
 			{
-
-				cost += abs(left_s[channel] - right_s[channel]);
-				//cost = left_s[channel];
-
+				cost += abs(left_p[channel] - right_q[channel]);
 			}
+
+
+			float w1 = weight(left_p, left_q, sample_r, sample_c, sample_r_with_disp, sample_c_with_disp);
+			float w2 = weight(right_p, right_q, sample_r, sample_c, sample_r_with_disp, sample_c_with_disp);
+			float w3 = weight(left_q, right_q, sample_r, sample_c, sample_r, sample_c_with_disp);
+			energy_top += w1*w2*w3;
+			
+			energy_bottom += w1*w2;
+
 
 		}
 	}
 
-	target.at<unsigned short>(r, c) = cost;
+	// EX3
+	float e = energy_top / energy_bottom;
+	target.at<float>(r, c) = e;
+
+	//target.at<unsigned short>(r, c) = cost;
+
 	
 	// Sanity Check
 	//Vec3s t = target.at<Vec3s>(r, c);
@@ -208,10 +257,8 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 			for (int i = 0; i<costVolumeRight.size(); i++) {
 
 				unsigned short valueLeft = costVolumeLeft.at(i).at<unsigned short>(x,y);
-				//costVolumeLeftXY = static_cast<float>(valueLeft);
 				costVolumeLeftXY = valueLeft;
 				unsigned short valueRight = costVolumeRight.at(i).at<unsigned short>(x,y);
-				//costVolumeRightXY = static_cast<float>(valueRight);
 				costVolumeRightXY = valueRight;
 
 				// minimize cost volumes
@@ -226,6 +273,47 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 			dispLeft.at<unsigned short>(x, y) = disparityPLeft*disparityScale;			//set pixel in desparity map
 			dispRight.at<unsigned short>(x, y) = disparityPRight*disparityScale;			//set pixel in desparity map
 			
+			// reset comparison values for next pixel
+			disparityPLeft = MAX_INIT;
+			disparityPRight = MAX_INIT;
+		}
+	}
+}
+
+void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight){
+
+	//int disparityScale = 9;
+	int disparityScale = 1; // good vor visualization
+	const float MAX_INIT = 2;
+	float disparityPLeft = MAX_INIT; // cost valume has entries > 255
+	float disparityPRight = MAX_INIT;
+	float costVolumeLeftXY = 0;
+	float costVolumeRightXY = 0;
+
+	// loop through pixels
+	for (int x = 0; x<dispLeft.rows; ++x) {
+		for (int y = 0; y<dispLeft.cols; ++y) {
+
+			// loop through disparity values
+			for (int i = 0; i<costVolumeRight.size(); i++) {
+
+				float valueLeft = costVolumeLeft.at(i).at<float>(x, y);
+				costVolumeLeftXY = valueLeft;
+				float valueRight = costVolumeRight.at(i).at<float>(x, y);
+				costVolumeRightXY = valueRight;
+
+				// minimize cost volumes
+				if (costVolumeLeftXY < disparityPLeft) {
+					disparityPLeft = costVolumeLeftXY;
+				}
+				if (costVolumeRightXY < disparityPRight) {
+					disparityPRight = costVolumeRightXY;
+				}
+			}
+
+			dispLeft.at<float>(x, y) = disparityPLeft*disparityScale;			//set pixel in desparity map
+			dispRight.at<float>(x, y) = disparityPRight*disparityScale;			//set pixel in desparity map
+
 			// reset comparison values for next pixel
 			disparityPLeft = MAX_INIT;
 			disparityPRight = MAX_INIT;

@@ -12,3 +12,5 @@ void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRig
 
 void selectDisparity(cv::Mat &dispLeft, cv::Mat &dispRight, std::vector<cv::Mat> &costVolumeLeft, std::vector<cv::Mat> &costVolumeRight);
 
+void selectDisparity_v2(cv::Mat &dispLeft, cv::Mat &dispRight, std::vector<cv::Mat> &costVolumeLeft, std::vector<cv::Mat> &costVolumeRight);
+
