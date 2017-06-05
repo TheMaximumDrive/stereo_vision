@@ -65,6 +65,8 @@ int ex_2(){
 	std::vector<Mat> costVolumeRight;
 	int windowSize = 6; // was 2 for submission ex2
 	int maxDisp = 5; // was 8 for submission ex2
+	//int scaleDispFactor = 9;
+	int scaleDispFactor = 1; // good for visualization
 
 	for (int disp = 0; disp <= maxDisp; disp++)
 	{
@@ -82,9 +84,10 @@ int ex_2(){
 	Mat dispLeft_vis(left.rows, left.cols, CV_8UC1, 0.0);
 	Mat dispRight_vis(right.rows, right.cols, CV_8UC1, 0.0);
 
-	//selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
+	//selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight, scaleDispFactor);
 	// EX3
-	selectDisparity_v2(dispLeft, dispRight, costVolumeLeft, costVolumeRight);
+	selectDisparity_v2(dispLeft, dispRight, costVolumeLeft, costVolumeRight, scaleDispFactor);
+	refineDisparity(dispLeft, dispRight, scaleDispFactor);
 
 	double min, max;
 	minMaxLoc(dispLeft, &min, &max);
@@ -239,12 +242,10 @@ void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRig
 
 }
 
-void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight){
+void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight, int scaleDispFactor){
 	
-	int disparityScale = 9;
-	//int disparityScale = 32; // good vor visualization
 	const unsigned short MAX_INIT = 1000;
-	unsigned short disparityPLeft = MAX_INIT; // cost valume has entries > 255
+	unsigned short disparityPLeft = MAX_INIT; // cost volume has entries > 255
 	unsigned short disparityPRight = MAX_INIT;
 	unsigned short  costVolumeLeftXY = 0;
 	unsigned short  costVolumeRightXY = 0;
@@ -270,8 +271,8 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 				}
 			}
 
-			dispLeft.at<unsigned short>(x, y) = disparityPLeft*disparityScale;			//set pixel in desparity map
-			dispRight.at<unsigned short>(x, y) = disparityPRight*disparityScale;			//set pixel in desparity map
+			dispLeft.at<unsigned short>(x, y) = disparityPLeft*scaleDispFactor;			//set pixel in desparity map
+			dispRight.at<unsigned short>(x, y) = disparityPRight*scaleDispFactor;			//set pixel in desparity map
 			
 			// reset comparison values for next pixel
 			disparityPLeft = MAX_INIT;
@@ -280,12 +281,10 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 	}
 }
 
-void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight){
+void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight, int scaleDispFactor){
 
-	//int disparityScale = 9;
-	int disparityScale = 1; // good vor visualization
 	const float MAX_INIT = 2;
-	float disparityPLeft = MAX_INIT; // cost valume has entries > 255
+	float disparityPLeft = MAX_INIT; // cost volume has entries > 255
 	float disparityPRight = MAX_INIT;
 	float costVolumeLeftXY = 0;
 	float costVolumeRightXY = 0;
@@ -311,12 +310,98 @@ void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLe
 				}
 			}
 
-			dispLeft.at<float>(x, y) = disparityPLeft*disparityScale;			//set pixel in desparity map
-			dispRight.at<float>(x, y) = disparityPRight*disparityScale;			//set pixel in desparity map
+			dispLeft.at<float>(x, y) = disparityPLeft*scaleDispFactor;			//set pixel in desparity map
+			dispRight.at<float>(x, y) = disparityPRight*scaleDispFactor;			//set pixel in desparity map
 
 			// reset comparison values for next pixel
 			disparityPLeft = MAX_INIT;
 			disparityPRight = MAX_INIT;
+		}
+	}
+}
+
+void refineDisparity(cv::Mat &dispLeft, cv::Mat &dispRight, int scaleDispFactor) {
+
+	Mat dispLeftCopy(dispLeft.rows, dispLeft.cols, CV_32FC1, 0.0);
+	Mat dispRightCopy(dispRight.rows, dispRight.cols, CV_32FC1, 0.0);
+	
+	// Mark inconsistent pixels
+	for (int x = 0; x<dispLeft.rows; ++x) {
+		for (int y = 0; y<dispLeft.cols; ++y) {
+			dispLeftCopy.at<float>(x, y) = dispLeft.at<float>(x, y) / scaleDispFactor;			//set pixel in desparity map
+			dispRightCopy.at<float>(x, y) = dispRight.at<float>(x, y) / scaleDispFactor;			//set pixel in desparity map
+
+			if (abs(dispLeftCopy.at<float>(x, y) - dispRightCopy.at<float>(x, y)) > 1) {
+				dispLeftCopy.at<float>(x, y) = FLT_MAX;
+				dispRightCopy.at<float>(x, y) = FLT_MAX;
+			}
+		}
+	}
+
+	for (int x = 0; x < dispLeft.rows; ++x) {
+		for (int y = 0; y < dispLeft.cols; ++y) {
+			if (dispLeftCopy.at<float>(x, y) == FLT_MAX) {
+				if (x == 0) {
+					int i = x; 
+					while(i < dispLeft.rows) {
+						if (dispLeftCopy.at<float>(i, y) != FLT_MAX) {
+							dispLeft.at<float>(x, y) = dispLeftCopy.at<float>(i, y) * scaleDispFactor;
+							dispRight.at<float>(x, y) = dispRightCopy.at<float>(i, y) * scaleDispFactor;
+							break;
+						}
+						i++;
+					}
+				}
+				else if (x == dispLeft.rows) {
+					int i = x;
+					while (i >= 0) {
+						if (dispLeftCopy.at<float>(i, y) != FLT_MAX) {
+							dispLeft.at<float>(x, y) = dispLeftCopy.at<float>(i, y) * scaleDispFactor;
+							dispRight.at<float>(x, y) = dispRightCopy.at<float>(i, y) * scaleDispFactor;
+							break;
+						}
+						i--;
+					}
+				}
+				else {
+					int leftNeighbor;
+					int rightNeighbor;
+					int i = x;
+
+					// Finding closest valid left and right neighbor's disparity
+					while (i < dispLeft.rows) {
+						if (dispLeftCopy.at<float>(i, y) != FLT_MAX) {
+							rightNeighbor = i;
+							break;
+						}
+						i++;
+					}
+					i = x;
+					while (i >= 0) {
+						if (dispLeftCopy.at<float>(i, y) != FLT_MAX) {
+							leftNeighbor = i;
+							break;
+						}
+						i--;
+					}
+
+					// Compare disparities and fill left disparity map
+					if (dispLeftCopy.at<float>(leftNeighbor, y) < dispLeftCopy.at<float>(rightNeighbor, y)) {
+						dispLeft.at<float>(x, y) = dispLeftCopy.at<float>(leftNeighbor, y) * scaleDispFactor;
+					}
+					else {
+						dispLeft.at<float>(x, y) = dispLeftCopy.at<float>(rightNeighbor, y) * scaleDispFactor;
+					}
+
+					// Compare disparities and fill right disparity map
+					if (dispRightCopy.at<float>(leftNeighbor, y) < dispRightCopy.at<float>(rightNeighbor, y)) {
+						dispRight.at<float>(x, y) = dispRightCopy.at<float>(leftNeighbor, y) * scaleDispFactor;
+					}
+					else {
+						dispRight.at<float>(x, y) = dispRightCopy.at<float>(rightNeighbor, y) * scaleDispFactor;
+					}
+				}
+			}
 		}
 	}
 }
