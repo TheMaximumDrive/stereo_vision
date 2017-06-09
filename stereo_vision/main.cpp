@@ -158,8 +158,8 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, const Mat &imgLe
 float weight(cv::Vec3b color_l, cv::Vec3b color_r, int sample_r, int sample_c, int sample_r_with_disp, int sample_c_with_disp){
 
 	float gamma_c = 7; // from paper
-	float gamme_p = 20; // from paper#
-	float k = 10;
+	float gamme_p = 20; 
+	float k = 5;
 
 	float delta_c = sqrt(pow((color_l[0] - color_r[0]), 2) + pow((color_l[1] - color_r[1]), 2) + pow((color_l[2] - color_r[2]), 2));
 	float delta_g = sqrt(pow(sample_r - sample_r_with_disp, 2) + pow(sample_c - sample_c_with_disp, 2));
