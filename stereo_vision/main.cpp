@@ -57,6 +57,12 @@ int ex_2(){
 	Mat left = imread(left_path); // channels are BGR
 	Mat right = imread(right_path);
 
+	Mat left_lab;
+	Mat right_lab;
+
+	cvtColor(left, left_lab, CV_RGB2Lab);
+	cvtColor(right, right_lab, CV_RGB2Lab);
+
 	//imshow("Left", left);
 	//imshow("Right", right);
 	//waitKey(0);
@@ -70,7 +76,7 @@ int ex_2(){
 
 	for (int disp = 0; disp <= maxDisp; disp++)
 	{
-		computeCostVolume(left, right, costVolumeLeft, costVolumeRight, windowSize, disp);
+		computeCostVolume(left_lab, right_lab,left,right, costVolumeLeft, costVolumeRight, windowSize, disp);
 	}
 
 	// Create empty gray-scale images
@@ -89,23 +95,23 @@ int ex_2(){
 	selectDisparity_v2(dispLeft, dispRight, costVolumeLeft, costVolumeRight, scaleDispFactor);
 	refineDisparity(dispLeft, dispRight, scaleDispFactor);
 
-	double min, max;
-	minMaxLoc(dispLeft, &min, &max);
-	dispLeft.convertTo(dispLeft_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	minMaxLoc(dispRight, &min, &max);
-	dispRight.convertTo(dispRight_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	
-	// display disparity maps
-	imshow("dispLeft", dispLeft_vis);
-	imshow("dispRight", dispRight_vis);
-	waitKey(0);
+	//double min, max;
+	//minMaxLoc(dispLeft, &min, &max);
+	//dispLeft.convertTo(dispLeft_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
+	//minMaxLoc(dispRight, &min, &max);
+	//dispRight.convertTo(dispRight_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
+	//
+	//// display disparity maps
+	//imshow("dispLeft", dispLeft_vis);
+	//imshow("dispRight", dispRight_vis);
+	//waitKey(0);
 
 	return 0;
 
 
 }
 
-void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat> &costVolumeLeft, std::vector<Mat> &costVolumeRight,
+void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, const Mat &imgLeft_RGB, const Mat &imgRight_RGB, std::vector<Mat> &costVolumeLeft, std::vector<Mat> &costVolumeRight,
 	int windowSize, int disp){
 
 	int max_rows = imgLeft.rows;
@@ -123,8 +129,8 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 		for (int cols = 0; cols < max_cols; cols++)
 		{
 
-			compute_cost(leftVolume, imgLeft, imgRight, rows, cols, max_rows, max_cols, windowSize, disp);
-			compute_cost(rightVolume, imgRight, imgLeft, rows, cols, max_rows, max_cols, windowSize, disp);
+			compute_cost(leftVolume, imgLeft, imgRight, imgLeft_RGB, imgRight_RGB, rows, cols, max_rows, max_cols, windowSize, disp);
+			compute_cost(rightVolume, imgRight, imgLeft,imgRight_RGB,imgLeft_RGB, rows, cols, max_rows, max_cols, windowSize, disp);
 
 		}
 	}
@@ -132,17 +138,17 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 	// doesnt visualize well
 	// bright patches are areas with data > 255 ( i think )
 
-	//Mat dst_left; 
-	//double min, max;
-	//minMaxLoc(leftVolume, &min, &max);
-	//leftVolume.convertTo(dst_left, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	//imshow("Left Volume", dst_left);
+	Mat dst_left; 
+	double min, max;
+	minMaxLoc(leftVolume, &min, &max);
+	leftVolume.convertTo(dst_left, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
+	imshow("Left Volume", dst_left);
 
-	//Mat dst_right;
-	//minMaxLoc(rightVolume, &min, &max);
-	//rightVolume.convertTo(dst_right, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	//imshow("Right Volume", dst_right);
-	//waitKey(0);
+	Mat dst_right;
+	minMaxLoc(rightVolume, &min, &max);
+	rightVolume.convertTo(dst_right, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
+	imshow("Right Volume", dst_right);
+	waitKey(0);
 
 	costVolumeLeft.push_back(leftVolume);
 	costVolumeRight.push_back(rightVolume);
@@ -152,21 +158,22 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, std::vector<Mat>
 float weight(cv::Vec3b color_l, cv::Vec3b color_r, int sample_r, int sample_c, int sample_r_with_disp, int sample_c_with_disp){
 
 	float gamma_c = 7; // from paper
-	float gamme_p = 40; // from paper
+	float gamme_p = 20; // from paper#
+	float k = 10;
 
 	float delta_c = sqrt(pow((color_l[0] - color_r[0]), 2) + pow((color_l[1] - color_r[1]), 2) + pow((color_l[2] - color_r[2]), 2));
 	float delta_g = sqrt(pow(sample_r - sample_r_with_disp, 2) + pow(sample_c - sample_c_with_disp, 2));
 
 	float inner = -1*( (delta_c / gamma_c ) + (delta_g / gamme_p));
 
-	float weight = expf(inner);
+	float weight = k*expf(inner);
 
 	return weight;
 
 
 }
 
-void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRight, int r, int c, int max_rows, int max_cols, int windowSize, int disp){
+void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRight, const cv::Mat &imgLeft_RGB, const cv::Mat &imgRight_RGB, int r, int c, int max_rows, int max_cols, int windowSize, int disp){
 
 	int window_off = windowSize / 2;
 	int channels = imgLeft.channels();
@@ -176,6 +183,8 @@ void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRig
 
 	Vec3b left_q = cv::Vec3b(0, 0, 0);
 	Vec3b right_p = cv::Vec3b(0, 0, 0);
+
+
 
 	unsigned int cost = 0;
 	float energy_top = 0;
@@ -220,8 +229,20 @@ void compute_cost(cv::Mat &target, const cv::Mat &imgLeft, const cv::Mat &imgRig
 
 			float w1 = weight(left_p, left_q, sample_r, sample_c, sample_r_with_disp, sample_c_with_disp);
 			float w2 = weight(right_p, right_q, sample_r, sample_c, sample_r_with_disp, sample_c_with_disp);
-			float w3 = weight(left_q, right_q, sample_r, sample_c, sample_r, sample_c_with_disp);
-			energy_top += w1*w2*w3;
+			float e = 0;
+			if (sample_r_with_disp >= 0 && sample_r_with_disp < max_rows && sample_c_with_disp >= 0 && sample_c_with_disp < max_cols){
+				for (int channel = 0; channel < channels; channel++)
+				{
+
+					float v = imgLeft_RGB.at<Vec3b>(sample_r_with_disp, sample_c_with_disp)[channel]-imgRight_RGB.at<Vec3b>(sample_r_with_disp, sample_c_with_disp)[channel];
+					e += v*v;
+				}
+
+			}
+
+			e = sqrt(e);
+
+			energy_top += w1*w2*e;
 			
 			energy_bottom += w1*w2;
 
