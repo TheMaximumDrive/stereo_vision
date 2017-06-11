@@ -87,13 +87,13 @@ int ex_2(){
 	Mat dispLeft(left.rows, left.cols, CV_32FC1, 0.0);
 	Mat dispRight(right.rows, right.cols, CV_32FC1, 0.0);
 
-	Mat dispLeft_vis(left.rows, left.cols, CV_8UC1, 0.0);
-	Mat dispRight_vis(right.rows, right.cols, CV_8UC1, 0.0);
+	Mat dispLeft_vis;
+	Mat dispRight_vis;
 
 	//selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight, scaleDispFactor);
 	// EX3
 	selectDisparity_v2(dispLeft, dispRight, costVolumeLeft, costVolumeRight, scaleDispFactor);
-	refineDisparity(dispLeft, dispRight, scaleDispFactor);
+	//refineDisparity(dispLeft, dispRight, scaleDispFactor);
 
 	double min, max;
 	minMaxLoc(dispLeft, &min, &max);
@@ -138,17 +138,17 @@ void computeCostVolume(const Mat &imgLeft, const Mat &imgRight, const Mat &imgLe
 	// doesnt visualize well
 	// bright patches are areas with data > 255 ( i think )
 
-	Mat dst_left; 
-	double min, max;
-	minMaxLoc(leftVolume, &min, &max);
-	leftVolume.convertTo(dst_left, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	imshow("Left Volume", dst_left);
+	//Mat dst_left; 
+	//double min, max;
+	//minMaxLoc(leftVolume, &min, &max);
+	//leftVolume.convertTo(dst_left, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
+	//imshow("Left Volume", dst_left);
 
-	Mat dst_right;
-	minMaxLoc(rightVolume, &min, &max);
-	rightVolume.convertTo(dst_right, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	imshow("Right Volume", dst_right);
-	waitKey(0);
+	//Mat dst_right;
+	//minMaxLoc(rightVolume, &min, &max);
+	//rightVolume.convertTo(dst_right, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
+	//imshow("Right Volume", dst_right);
+	//waitKey(0);
 
 	costVolumeLeft.push_back(leftVolume);
 	costVolumeRight.push_back(rightVolume);
