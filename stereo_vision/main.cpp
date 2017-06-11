@@ -71,8 +71,8 @@ int ex_2(){
 	std::vector<Mat> costVolumeRight;
 	int windowSize = 6; // was 2 for submission ex2
 	int maxDisp = 5; // was 8 for submission ex2
-	//int scaleDispFactor = 9;
-	int scaleDispFactor = 1; // good for visualization
+	float scaleDispFactor = 9;
+	//float scaleDispFactor = 1; // good for visualization
 
 	for (int disp = 0; disp <= maxDisp; disp++)
 	{
@@ -84,8 +84,8 @@ int ex_2(){
 	//Mat dispRight(right.rows, right.cols, CV_16UC1, 0.0);
 
 	// EX3
-	Mat dispLeft(left.rows, left.cols, CV_32FC1, 0.0);
-	Mat dispRight(right.rows, right.cols, CV_32FC1, 0.0);
+	Mat dispLeft(left.rows, left.cols, CV_32FC1, 1.0);
+	Mat dispRight(right.rows, right.cols, CV_32FC1, 1.0);
 
 	Mat dispLeft_vis;
 	Mat dispRight_vis;
@@ -93,7 +93,7 @@ int ex_2(){
 	//selectDisparity(dispLeft, dispRight, costVolumeLeft, costVolumeRight, scaleDispFactor);
 	// EX3
 	selectDisparity_v2(dispLeft, dispRight, costVolumeLeft, costVolumeRight, scaleDispFactor);
-	//refineDisparity(dispLeft, dispRight, scaleDispFactor);
+	refineDisparity(dispLeft, dispRight, scaleDispFactor);
 
 	double min, max;
 	minMaxLoc(dispLeft, &min, &max);
@@ -302,9 +302,9 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 	}
 }
 
-void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight, int scaleDispFactor){
+void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight, float scaleDispFactor){
 
-	const float MAX_INIT = 2;
+	const float MAX_INIT = 1000;
 	float disparityCostLeft = MAX_INIT; // cost volume has entries > 255
 	float disparityCostRight = MAX_INIT;
 	int disparityLeft = 0;
@@ -333,8 +333,8 @@ void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLe
 				}
 			}
 
-			dispLeft.at<float>(x, y) = disparityLeft*scaleDispFactor;			//set pixel in desparity map
-			dispRight.at<float>(x, y) = disparityRight*scaleDispFactor;			//set pixel in desparity map
+			dispLeft.at<float>(x, y) = disparityCostLeft*scaleDispFactor;			//set pixel in desparity map
+			dispRight.at<float>(x, y) = disparityCostRight*scaleDispFactor;			//set pixel in desparity map
 
 			// reset comparison values for next pixel
 			disparityCostLeft = MAX_INIT;
@@ -345,7 +345,7 @@ void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLe
 	}
 }
 
-void refineDisparity(cv::Mat &dispLeft, cv::Mat &dispRight, int scaleDispFactor) {
+void refineDisparity(cv::Mat &dispLeft, cv::Mat &dispRight, float scaleDispFactor) {
 
 	Mat dispLeftCopy(dispLeft.rows, dispLeft.cols, CV_32FC1, 0.0);
 	Mat dispRightCopy(dispRight.rows, dispRight.cols, CV_32FC1, 0.0);
