@@ -95,16 +95,16 @@ int ex_2(){
 	selectDisparity_v2(dispLeft, dispRight, costVolumeLeft, costVolumeRight, scaleDispFactor);
 	refineDisparity(dispLeft, dispRight, scaleDispFactor);
 
-	//double min, max;
-	//minMaxLoc(dispLeft, &min, &max);
-	//dispLeft.convertTo(dispLeft_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	//minMaxLoc(dispRight, &min, &max);
-	//dispRight.convertTo(dispRight_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
-	//
-	//// display disparity maps
-	//imshow("dispLeft", dispLeft_vis);
-	//imshow("dispRight", dispRight_vis);
-	//waitKey(0);
+	double min, max;
+	minMaxLoc(dispLeft, &min, &max);
+	dispLeft.convertTo(dispLeft_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
+	minMaxLoc(dispRight, &min, &max);
+	dispRight.convertTo(dispRight_vis, CV_8U, 255.0 / (max - min), -min * 255.0 / (max - min));
+	
+	// display disparity maps
+	imshow("dispLeft", dispLeft_vis);
+	imshow("dispRight", dispRight_vis);
+	waitKey(0);
 
 	return 0;
 
@@ -305,8 +305,10 @@ void selectDisparity(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft,
 void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLeft, vector<Mat> &costVolumeRight, int scaleDispFactor){
 
 	const float MAX_INIT = 2;
-	float disparityPLeft = MAX_INIT; // cost volume has entries > 255
-	float disparityPRight = MAX_INIT;
+	float disparityCostLeft = MAX_INIT; // cost volume has entries > 255
+	float disparityCostRight = MAX_INIT;
+	int disparityLeft = 0;
+	int disparityRight = 0;
 	float costVolumeLeftXY = 0;
 	float costVolumeRightXY = 0;
 
@@ -317,26 +319,28 @@ void selectDisparity_v2(Mat &dispLeft, Mat &dispRight, vector<Mat> &costVolumeLe
 			// loop through disparity values
 			for (int i = 0; i<costVolumeRight.size(); i++) {
 
-				float valueLeft = costVolumeLeft.at(i).at<float>(x, y);
-				costVolumeLeftXY = valueLeft;
-				float valueRight = costVolumeRight.at(i).at<float>(x, y);
-				costVolumeRightXY = valueRight;
+				float costVolumeLeftXY = costVolumeLeft.at(i).at<float>(x, y);
+				float costVolumeRightXY = costVolumeRight.at(i).at<float>(x, y);
 
 				// minimize cost volumes
-				if (costVolumeLeftXY < disparityPLeft) {
-					disparityPLeft = costVolumeLeftXY;
+				if (costVolumeLeftXY < disparityCostLeft) {
+					disparityCostLeft = costVolumeLeft.at(i).at<float>(x, y);
+					disparityLeft = i;
 				}
-				if (costVolumeRightXY < disparityPRight) {
-					disparityPRight = costVolumeRightXY;
+				if (costVolumeRightXY < disparityCostRight) {
+					disparityCostRight = costVolumeRight.at(i).at<float>(x, y);
+					disparityRight = i;
 				}
 			}
 
-			dispLeft.at<float>(x, y) = disparityPLeft*scaleDispFactor;			//set pixel in desparity map
-			dispRight.at<float>(x, y) = disparityPRight*scaleDispFactor;			//set pixel in desparity map
+			dispLeft.at<float>(x, y) = disparityLeft*scaleDispFactor;			//set pixel in desparity map
+			dispRight.at<float>(x, y) = disparityRight*scaleDispFactor;			//set pixel in desparity map
 
 			// reset comparison values for next pixel
-			disparityPLeft = MAX_INIT;
-			disparityPRight = MAX_INIT;
+			disparityCostLeft = MAX_INIT;
+			disparityCostRight = MAX_INIT;
+			disparityLeft = 0;
+			disparityRight = 0;
 		}
 	}
 }
